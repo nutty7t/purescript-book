@@ -1,4 +1,4 @@
-module Main where
+module Recursion where
 
 import Prelude
 
