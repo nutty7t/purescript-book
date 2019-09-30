@@ -137,3 +137,64 @@ filterFlip = flip filter
 infixl 0 filterFlip as <$?>
 (-5 .. 5) <$?> (\x -> x >= 0) <$?> even
 ```
+
+# Comprehensions
+
+1. (Easy) Use the `factors` function to define a function `isPrime` which tests
+   if its integer argument is prime or not.
+
+``` haskell
+isPrime :: Int -> Boolean
+isPrime n = n > 1 && (length $ factors n) == 1
+```
+
+2. (Medium) Write a function which uses do notation to find the *cartesian
+   product* of two arrays, i.e. the set of all pairs of elements `a`, `b`,
+   where `a` is an element of the first array, and `b` is an element of the
+   second.
+
+``` haskell
+-- | TBH, I don't really understand how 'do' expressions really work. I imagine
+-- | that things will make more sense when I learn more about monads. But for
+-- | now, in my head, it's not dissimilar to a nested list comprehension in
+-- | Python: [(i, j) for i in a for j in b].
+product :: forall a. Array a -> Array a -> Array (Array a)
+product a b = do
+  i <- a
+  j <- b
+  pure [i, j]
+```
+
+3. (Medium) A *Pythagorean triple* is an array of numbers `[a, b, c]` such that
+   `a² + b² = c²`. Use the `guard` function in an array comprehension to write
+   a function `triples` which takes a number `n` and calculates all Pythagorean
+   triples whose components are less than `n`. Your function should have type
+   `Int -> Array (Array Int)`. 
+
+``` haskell
+triples :: Int -> Array (Array Int)
+triples n = do
+  a <- 1 .. n
+  b <- a .. n
+  c <- b .. n
+  guard $ a * a + b * b == c * c
+  pure [a, b, c]
+```
+
+4. (Difficult) Write a function `factorizations` which produces all
+   *factorizations* of an integer `n`, i.e. arrays of integers whose product is
+   `n`. *Hint*: for an integer greater than 1, break the problem down into two
+   subproblems: finding the first factor, and finding the remaining factors.
+
+``` haskell
+firstFactor :: Int -> Int
+firstFactor n = fromMaybe n $ head $ filter (\i -> mod n i == zero) (2 .. n)
+
+factorizations :: Int -> Array (Array Int)
+factorizations n = do
+  x <- firstFactor n .. n
+  y <- x .. n
+  guard $ x * y == n
+  pure [x, y]
+```
+
