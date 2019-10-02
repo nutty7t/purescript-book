@@ -198,3 +198,60 @@ factorizations n = do
   pure [x, y]
 ```
 
+# Folds
+
+1. (Easy) Use `foldl` to test whether an array of boolean values are all true.
+
+``` haskell
+conjunction :: Array Boolean -> Boolean
+conjunction = foldl (&&) true
+```
+
+2. (Medium) Characterize those arrays `xs` for which the function `foldl (==)
+   false xs` returns true.
+
+We can modeling `foldl` as a finite state machine. Every time an element of the
+array gets folded over (the "transitions"), the value of the accumulator (the
+"state") gets "updated." We can observe that `true` elements are self-looping
+transitions that don't change the value of the accumulator. Only `false`
+elements toggle the state back and forth between `true` and `false`.
+
+```
+         +------+   +-------------------------+  +------+
+         |      |   |                         |  |      |
+         |      |   |         == false        |  |      |
+         |      |   |                         v  v      |
+         |    +-------+                     +------+    |
+== true  |    | false |                     | true |    |  == true
+         |    +-------+                     +------+    |
+         |      ^   ^                         |  |      |
+         |      |   |         == false        |  |      |
+         |      |   |                         |  |      |
+         +------+   +-------------------------+  +------+
+```
+
+The initial state is `false`. It's easy to see that any arrays that make the
+expression `foldl (==) false xs` evaluate to `true` are arrays that have an odd
+number of `false` elements.
+
+3. (Medium) Rewrite the `fib` function in tail recursive form using an
+   accumulator parameter:
+
+``` haskell
+fib :: Int -> Int
+fib 0 = 1
+fib 1 = 1
+fib n = fib' (n - 2) 1 1
+  where
+    fib' :: Int -> Int -> Int -> Int
+    fib' 0 x y = x + y
+    fib' a x y = fib' (a - 1) y (x + y)
+```
+
+4. (Medium) Write `reverse` in terms of `foldl`.
+
+``` haskell
+reverse :: forall a. Array a -> Array a
+reverse = foldl (\xs x -> [x] <> xs) []
+```
+
