@@ -255,3 +255,74 @@ reverse :: forall a. Array a -> Array a
 reverse = foldl (\xs x -> [x] <> xs) []
 ```
 
+# Virtual Filesystem
+
+1. (Easy) Write a function `onlyFiles` which returns all *files* (not
+   directories) in all subdirectories of a directory.
+
+``` haskell
+onlyFiles :: Path -> Array Path
+onlyFiles dir = filter (not <<< isDirectory) $ allFiles dir
+```
+
+2. (Medium) Write a fold to determine the largest and smallest files in the
+   filesystem.
+
+``` haskell
+smaller :: Path -> Path -> Path
+smaller a b = if size a < size b then a else b
+
+smallest :: Maybe Path
+smallest = case uncons $ onlyFiles root of
+  Just { head: x, tail: xs } -> Just $ foldl smaller x xs
+  Nothing -> Nothing
+
+bigger :: Path -> Path -> Path
+bigger a b = if size a > size b then a else b
+
+biggest :: Maybe Path
+biggest = case uncons $ onlyFiles root of
+  Just { head: x, tail: xs } -> Just $ foldl bigger x xs
+  Nothing -> Nothing
+```
+
+My initial attempt was to do something like `foldl smaller root $ onlyFiles
+root`. But `root` is not a file, so that would be incorrect. Instead, I split
+the list into its head and tail, and used the head as the initial accumulator
+value and folded over the tail. Pattern matching is not covered until the next
+chapter (shhhh...), but the example usage for `uncons` in the Pursuit
+documentation gave me enough context to use it.
+
+3. (Difficult) Write a function `whereIs` to search for a file by name. The
+   function should return a value of type `Maybe Path`, indicating the
+   directory containing the file, if it exists. It should behave as follows:
+
+   > ``` haskell
+   > > whereIs "/bin/ls"
+   > Just (/bin/)
+   > 
+   > > whereIs "/bin/cat"
+   > Nothing
+   > ```
+
+   *Hint*: Try to write this function as an array comprehension using do
+   notation.
+
+``` haskell
+whereIs :: String -> Maybe Path
+whereIs name = head $ search root
+  where
+    search :: Path -> Array Path
+    search path = (parent path) <> do
+      child <- ls path
+      search child
+        where
+          parent :: Path -> Array Path
+          parent file = do
+            child <- ls file
+            guard $ (filename child) == name
+            pure file
+```
+
+^ bad beginner solution
+
