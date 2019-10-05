@@ -24,3 +24,33 @@ choose n k
   | otherwise = add (choose (n - 1) (k - 1)) (choose (n - 1) k)
 ```
 
+## Records
+
+1. (Easy) Write a function `sameCity` which uses record patterns to test
+   whether two `Person` records belong to the same city.
+
+``` haskell
+sameCity :: Person -> Person -> Boolean
+sameCity { address: { city: x } } { address: { city: y } } = x == y
+```
+
+2. (Medium) What is the most general type of the `sameCity` function, taking
+   into account row polymorphism? What about the `livesInLA` function defined
+   above?
+
+```
+sameCity :: forall a b c d. { address :: { city :: String | a } | b } -> { address :: { city :: String | c } | d } -> Boolean
+livesInLA :: forall a b. { address :: { city :: String | a } | b } -> Boolean
+```
+
+3. (Medium) Write a function `fromSingleton` which uses an array literal
+   pattern to extract the sole member of a singleton array. If the array is not
+   a singleton, your function should return a provided default value. Your
+   function should have type `forall a. a -> Array a -> a`.
+
+``` haskell
+fromSingleton :: forall a. a -> Array a -> a
+fromSingleton d [e] = e
+fromSingleton d arr = d
+```
+
