@@ -54,3 +54,43 @@ fromSingleton d [e] = e
 fromSingleton d arr = d
 ```
 
+## Algebraic Data Types
+
+1. (Easy) Construct a value of type `Shape` which represents a circle centered
+   at the origin with radius `10.0`.
+
+``` haskell
+circle :: Shape
+circle = Circle p 10.0
+  where
+    p :: Point
+    p = Point { x: 0.0, y: 0.0 }
+```
+
+2. (Medium) Write a function from `Shape`s to `Shape`s, which scales its
+   argument by a factor of `2.0`, center the origin.
+
+``` haskell
+origin :: Point
+origin = Point { x: 0.0, y: 0.0 }
+
+dilate :: Number -> Point -> Point
+dilate f (Point { x, y }) = Point { x: (x * f), y: (y * f) }
+
+scale2 :: Shape -> Shape
+scale2 (Circle c r) = Circle origin (r * 2.0)
+scale2 (Rectangle c w h) = Rectangle origin (w * 2.0) (h * 2.0)
+scale2 (Line start end) = Line (dilate 2.0 start) (dilate 2.0 end)
+scale2 (Text p text) = Text origin text
+```
+
+3. (Medium) Write a function which extracts the text from a `Shape`. It should
+   return `Maybe String`, and use the `Nothing` constructor if the the input is
+   not constructed using `Text`.
+
+``` haskell
+extractText :: Shape -> Maybe String
+extractText (Text p text) = Just text
+extractText _ = Nothing
+```
+
