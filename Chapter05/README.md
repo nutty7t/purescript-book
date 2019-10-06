@@ -94,3 +94,46 @@ extractText (Text p text) = Just text
 extractText _ = Nothing
 ```
 
+## More Abstract Data Types
+
+1. (Medium) Extend the vector graphics library with a new operation `area`
+   which computes the area of a `Shape`. For the purposes of this exercise, the
+   area of a piece of text is assumed to be zero.
+
+``` haskell
+area :: Shape -> Number
+area (Circle _ r) = pi * r * r
+area (Rectangle _ w h) = w * h
+area _ = 0.0
+```
+
+2. (Difficult) Extend the `Shape` type with a new data constructor `Clipped`,
+   which clips another `Picture` to a rectangle. Extend the `shapeBounds`
+   function to compute the bounds of a clipped picture. Note that this makes
+   `Shape` into a recursive data type.
+
+``` haskell
+-- | This makes `Shape` into a recursive type because `Picture` is an alias for
+-- | `Array Shape`.
+data Shape
+  = Circle Point Number
+  | Rectangle Point Number Number
+  | Line Point Point
+  | Text Point String
+  | Clipped Picture
+
+showShape :: Shape -> String
+-- ...
+showShape (Clipped p) =
+  "Clipped [picture: " <> (show $ map showShape p) <> "]"
+
+showBounds :: Bounds -> String
+-- ...
+shapeBounds (Clipped p) = bounds p
+```
+
+``` haskell
+> showBounds $ shapeBounds $ Clipped [(Rectangle (Point { x: 1.0, y: 1.0 }) 4.0 5.0), (Rectangle (Point { x: 0.0, y: 0.0 }) 4.0 5.0)]
+
+"Bounds [top: -2.5, left: -2.0, bottom: 3.5, right: 3.0]"
+```
