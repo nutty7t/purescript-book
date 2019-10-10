@@ -70,7 +70,7 @@ instance functorNonEmpty :: Functor NonEmpty where
 … id :: forall a. a -> a
 … id a = a
 …
-> id <$> NonEmpty 0 [1, 2, 3])
+> id <$> NonEmpty 0 [1, 2, 3]
 [0,1,2,3]
 ```
 
@@ -148,4 +148,115 @@ instance foldableOneMore :: Foldable f => Foldable (OneMore f) where
   foldl f z (OneMore a x) = foldl f (f z a) x
   foldMap f (OneMore a x) = (f a) <> foldMap f x
 ```
+
+## Advanced Type Classes
+
+1. (Medium) Define a partial function which finds the maximum of a non-empty
+   array of integers. Your function should have type `Partial => Array Int ->
+   Int`. Test out your function in PSCi using `unsafePartial`. *Hint*: Use the
+   `maximum` function from `Data.Foldable`.
+
+``` haskell
+partialMax :: Partial => Array Int -> Int
+partialMax a = fromJust $ maximum a
+```
+
+2. (Medium) The `Action` class is a multi-parameter type class which defines an
+   action of one type on another:
+
+   ``` haskell
+   class Monoid m <= Action m a where
+     act :: m -> a -> a
+   ```
+
+   An *action* is a function which describes how monoidal values can be used to
+   modify a value of another type. There are two laws for the `Action` type
+   class.
+
+   ``` haskell
+   act mempty a = a
+   act (m1 <> m2) a = act m1 (act m2 a)
+   ```
+
+   That is, the action respects the operations defined by the `Monoid` class.
+
+   For example, the natural numbers form a monoid under multiplication:
+
+   ``` haskell
+   newtype Multiply = Multiply Int
+
+   instance semigroupMultiply :: Semigroup Multiply where
+     append (Multiply n) (Multiply m) = Multiply (n * m)
+	
+   instance monoidMultiply :: Monoid Multiply where
+     mempty = Multiply 1
+   ```
+
+   This monoid acts on strings by repeating an input string some number of
+   times. Write an instance which implements this action.
+
+   ``` haskell
+   instance repeatAction :: Action Multiply String
+   ```
+
+   Does this instance satisfy the laws listed above?
+
+``` haskell
+instance repeatAction :: Action Multiply String where
+  act (Multiply n) s = fromMaybe "" $ repeat n s
+```
+
+Yeah, they seem to satisfy the laws listed above.
+
+``` haskell
+> a = "foo"
+> m1 = Multiply 2
+> m2 = Multiply 3
+
+> eq a $ act (mempty :: Multiply) a
+true
+
+> eq (act (m1 <> m2) a) $ act m1 (act m2 a)
+true
+```
+
+3. (Medium) Write an instance `Action m a => Action m (Array a)`, where the
+   action on arrays is defined by acting on each array element independently.
+
+``` haskell
+instance arrayAction :: Action m a => Action m (Array a) where
+  act m f = act m <$> f
+```
+
+Arrrrrgh, I initially forgot to include the `Action m a` instance dependency.
+For the longest time, I couldn't figure out why Haskell couldn't infer the type
+of `act m`. T.T
+
+4. (Difficult) Given the following newtype, write an instance for `Action m
+   (Self m)`, where the monoid `m` acts on itself using `append`:
+
+   ``` haskell
+   newtype Self m = Self m
+   ```
+
+``` haskell
+instance selfAction :: Monoid m => Action m (Self m) where
+  act a (Self b) = Self (a <> b)
+```
+
+I had some trouble trying to understand why the `Monoid m` type constraint was
+needed on the instance, so I went to the #purescript channel on the FP Slack to
+ask for some help:
+
+![typeclass-question](https://user-images.githubusercontent.com/40926021/66531865-2c578900-eac2-11e9-8247-93d6f50ff196.PNG)
+
+5. (Difficult) Should the arguments of the multi-parameter type class `Action`
+   be related by some functional dependency? Why or why not?
+
+The functional dependency `m -> a` won't work because `m` is quantified in
+`arrayAction`, making it overlap with `repeatAction`. It may make sense to
+relate `a -> m` if the type `a` can uniquely identify type `m`, but it's hard
+to tell if it does with only two instances. But if we do have the functional
+dependency `a -> m`, we can write expressions like `act mempty "foo"` without
+needing to type annotate `mempty`.
 

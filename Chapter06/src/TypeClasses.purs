@@ -3,7 +3,9 @@ module TypeClasses where
 import Prelude
 
 import Data.Array (cons, foldMap, foldl, foldr)
-import Data.Foldable (class Foldable)
+import Data.Foldable (class Foldable, maximum)
+import Data.Maybe (fromJust, fromMaybe)
+import Data.String.Utils (repeat)
 
 -- | Exercise 1 (Common Type Classes)
 newtype Complex = Complex
@@ -63,4 +65,33 @@ instance foldableOneMore :: Foldable f => Foldable (OneMore f) where
   foldr f z (OneMore a x) = f a (foldr f z x)
   foldl f z (OneMore a x) = foldl f (f z a) x
   foldMap f (OneMore a x) = (f a) <> foldMap f x
+
+-- | Exercise 1 (Advanced Type Classes)
+partialMax :: Partial => Array Int -> Int
+partialMax a = fromJust $ maximum a
+
+-- | Exercise 2 (Advanced Type Classes)
+newtype Multiply = Multiply Int
+
+instance semigroupMultiply :: Semigroup Multiply where
+  append (Multiply n) (Multiply m) = Multiply (n * m)
+
+instance monoidMultiply :: Monoid Multiply where
+  mempty = Multiply 1
+
+class Monoid m <= Action m a where
+  act :: m -> a -> a
+
+instance repeatAction :: Action Multiply String where
+  act (Multiply n) s = fromMaybe "" $ repeat n s
+
+-- | Exercise 3 (Advanced Type Classes)
+instance arrayAction :: Action m a => Action m (Array a) where
+  act m f = act m <$> f
+
+-- | Exercise 4 (Advanced Type Classes)
+newtype Self m = Self m
+
+instance selfAction :: Monoid m => Action m (Self m) where
+  act a (Self b) = Self (a <> b)
 
