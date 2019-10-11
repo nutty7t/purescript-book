@@ -260,3 +260,96 @@ to tell if it does with only two instances. But if we do have the functional
 dependency `a -> m`, we can write expressions like `act mempty "foo"` without
 needing to type annotate `mempty`.
 
+## Hashable Type Class
+
+1. (Easy) Use PSCi to test the hash functions for each of the defined instances.
+
+``` haskell
+> hash 7
+(HashCode 7)
+
+> hash 100000
+(HashCode 34465)
+
+> hash true
+(HashCode 1)
+
+> hash false
+(HashCode 0)
+
+> hash 'n'
+(HashCode 110)
+
+> hash '7'
+(HashCode 55)
+
+> hash 'β'
+(HashCode 946)
+
+> hash ['n', 'u', 't', 't', 'y', '7', 't']
+(HashCode 17544)
+```
+
+2. (Medium) Use the `hashEqual` function to write a function which tests if an
+   array has any duplicate elements, using hash-equality as an approximation to
+   value equality. Remember to check for value equality using `==` if a
+   duplicate pair is found. *Hint*: the `nubBy` function in `Data.Array` should
+   make this task much simpler.
+
+``` haskell
+hasDuplicate :: forall a. Hashable a => Array a -> Boolean
+hasDuplicate xs = (length xs) /= (length $ nubByEq equal xs)
+  where
+    equal :: a -> a -> Boolean
+    equal x y = (hashEqual x y) && (x == y)
+```
+
+3. (Medium) Write a `Hashable` instance for the following newtype which
+   satisfies the type class law:
+
+   ``` haskell
+   newtype Hour = Hour Int
+
+   instance eqHour :: Eq Hour where
+     eq (Hour n) (Hour m) = mod n 12 == mod m 12
+   ```
+
+   The newtype `Hour` and its `Eq` instance represent the type of integers
+   modulo 12, so that 1 and 13 are identified as equal, for example. Prove that
+   the type class law holds for your instance.
+
+``` haskell
+instance hashHour :: Hashable Hour where
+  hash (Hour n) = hashCode $ mod n 12
+```
+
+The type class law holds because I defined the `hash` function to equal the
+wrapper integer modulo 12. lol, is this even a proof? how do you proof?
+
+4. (Difficult) Prove the type class laws for the `Hashable` instances for
+   `Maybe`, `Either`, and `Tuple`.
+
+##### Maybe
+
+Proof by exhaustion.
+
+Case 1: The only value that represents an empty value (null) is `Nothing`.
+
+Case 2: All other values are *just* wrapped values. The type class law holds
+for this case because `hash` is defined as a function of the wrapped value.
+$\text{Just} (a) = \text{Just} (b) \implies a = b \implies f(a) = f(b)$.
+
+##### Either
+
+Proof by exhaustion.
+
+Case 1. `Left a` wraps `a`. The type class law holds for this case because
+`hash` is defined as a function of the wrapped value.
+
+Case 2. Ditto.
+
+##### Tuple
+
+$\text{Tuple} (a, b) = \text{Tuple} (c, d) \implies a = c \land b = d \implies
+f(a, b) = f(c, d)$.
+
