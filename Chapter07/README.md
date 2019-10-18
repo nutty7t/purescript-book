@@ -47,3 +47,38 @@ combineMaybe Nothing = pure Nothing
 combineMaybe (Just x) = Just <$> x
 ```
 
+## Applicative Validation
+
+1. (Easy) Use a regular expression validator to ensure that the `state` field
+   of the `Address` type contains two alphabetic characters. *Hint*: see the
+   source code for `phoneNumberRegex`.
+
+``` haskell
+stateRegex :: Regex
+stateRegex =
+  unsafePartial
+    case regex "^[a-zA-Z]{2}$" noFlags of
+      Right r -> r
+
+validateAddress :: Address -> V Errors Address
+validateAddress (Address o) =
+  address <$> (nonEmpty "Street" o.street         *> pure o.street)
+          <*> (nonEmpty "City"   o.city           *> pure o.city)
+          <*> (matches "State" stateRegex o.state *> pure o.state)
+```
+
+2. (Medium) Using the `matches` validator, write a validation function which
+   checks that a string is not entirely whitespace. Use it to replace
+   `nonEmpty` where appropriate.
+
+``` haskell
+whitespaceRegex :: Regex
+whitespaceRegex =
+  unsafePartial
+    case regex "^.*\\S.*$" noFlags of
+      Right r -> r
+
+nonEmpty' :: String -> String -> V Errors Unit
+nonEmpty' field s = matches field whitespaceRegex s
+```
+
