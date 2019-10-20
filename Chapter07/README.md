@@ -82,3 +82,116 @@ nonEmpty' :: String -> String -> V Errors Unit
 nonEmpty' field s = matches field whitespaceRegex s
 ```
 
+## Traversable Functors
+
+1. (Medium) Write a `Traversable` instance for the following binary tree data
+   structure, which combines side-effects from left-to-right:
+
+   ``` haskell
+   data Tree a = Leaf | Branch (Tree a) a (Tree a)
+   ```
+
+   This corresponds to an in-order traversal of the tree. What about a preorder
+   traversal? What about reverse order?
+
+``` haskell
+data Tree a = Leaf | Branch (Tree a) a (Tree a)
+
+instance showTree :: Show a => Show (Tree a) where
+  show Leaf = "•"
+  show (Branch l n r) =
+    "(" <> " " <> show l <> " " <> show n <> " " <> show r <> " " <> ")"
+
+instance functorTree :: Functor Tree where
+  map fn Leaf = Leaf
+  map fn (Branch l n r) = Branch (fn <$> l) (fn n) (fn <$> r)
+
+instance foldableTree :: Foldable Tree where
+  foldl _  a Leaf = a
+  foldl f a (Branch l n r) = foldl f (f (foldl f a l) n) r
+  foldr _ a Leaf = a
+  foldr f a (Branch l n r) = foldr f (f n (foldr f a r)) l
+  foldMap _ Leaf = mempty
+  foldMap f (Branch l n r) = foldMap f l <> f n <> foldMap f r
+
+instance traversableTree :: Traversable Tree where
+  traverse _ Leaf = pure Leaf
+  traverse f (Branch l n r) = Branch <$> traverse f l <*> f n <*> traverse f r
+  sequence Leaf = pure Leaf
+  sequence (Branch l n r) = Branch <$> sequence l <*> n <*> sequence r
+
+-- |   3
+-- |  / \
+-- | 4   5
+exampleTree :: Tree Int
+exampleTree = Branch (Branch Leaf 4 Leaf) 3 (Branch Leaf 5 Leaf)
+```
+
+``` haskell
+> map (\x -> x * 2) exampleTree
+( ( • 8 • ) 6 ( • 10 • ) )
+
+> foldMap Multiplicative exampleTree
+(Multiplicative 60)
+
+> traverse (\x -> 1 .. x) (Branch Leaf 5 Leaf)
+[( • 1 • ),( • 2 • ),( • 3 • ),( • 4 • ),( • 5 • )]
+```
+
+To get a preorder traversal or a reverse order traversal, all we need to do is
+change the order in which the left tree, the root, and the right tree are
+evaluated:
+
+```
+Preorder: root node, left tree, right tree
+Postorder: left tree, right tree, root node
+```
+
+2. (Medium) Modify the code to make the `address` field of the `Person` type
+   optional using `Data.Maybe`. *Hint*: Use `traverse` to validate a field of
+   type `Maybe a`.
+
+``` haskell
+newtype Person = Person
+  { firstName   :: String
+  , lastName    :: String
+  , homeAddress :: Maybe Address -- refactor
+  , phones      :: Array PhoneNumber
+  }
+
+person :: String -> String -> Maybe Address -> Array PhoneNumber -> Person -- refactor
+person firstName lastName homeAddress phones =
+  Person { firstName, lastName, homeAddress, phones }
+
+examplePerson :: Person
+examplePerson =
+  person "John" "Smith"
+         (Just $ address "123 Fake St." "FakeTown" "CA") -- refactor
+         [ phoneNumber HomePhone "555-555-5555"
+         , phoneNumber CellPhone "555-555-0000"
+         ]
+
+validatePerson :: Person -> V Errors Person
+validatePerson (Person o) =
+  person <$> (nonEmpty' "First Name" o.firstName *> pure o.firstName)
+         <*> (nonEmpty' "Last Name"  o.lastName  *> pure o.lastName)
+         <*> traverse validateAddress o.homeAddress -- refactor
+         <*> (arrayNonEmpty "Phone Numbers" o.phones *> traverse validatePhoneNumber o.phones)
+
+validatePersonAdo :: Person -> V Errors Person
+validatePersonAdo (Person o) = ado
+  firstName   <- (nonEmpty' "First Name" o.firstName *> pure o.firstName)
+  lastName    <- (nonEmpty' "Last Name"  o.lastName  *> pure o.lastName)
+  address     <- traverse validateAddress o.homeAddress -- refactor
+  numbers     <- (arrayNonEmpty "Phone Numbers" o.phones *> traverse validatePhoneNumber o.phones)
+  in person firstName lastName address numbers
+```
+
+3. (Difficult) Try to write `sequence` in terms of `traverse`. Can you write
+   `traverse` in terms of `sequence`?
+
+``` haskell
+sequence = traverse identity
+traverse f = sequence <<< map f
+```
+
