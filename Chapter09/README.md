@@ -110,3 +110,70 @@ main = void $ unsafePartial do
       ctx <- getContext2D canvas
       renderPath ctx $ -100 .. 100 <#> toNumber <#> flip div 100.0 <#> f
 ```
+
+## Canvas
+
+1. (Easy) Write a higher-order function which strokes and fills a path
+   simultaneously. Rewrite the `Random.purs` example using your function.
+
+``` sh
+spago bundle-app --main Example.Random --to html/index.js
+```
+
+``` haskell
+fillStrokePath :: forall a. Context2D -> Effect a -> Effect a
+fillStrokePath ctx path = do
+  _ <- fillPath ctx path -- not quite sure why we have to explicitly discard
+  strokePath ctx path
+```
+
+2. (Medium) Use `Random` and `Dom` to create an application which renders a
+   circle with random position, color and radius to the canvas when the mouse
+   is clicked.
+
+``` sh
+spago bundle-app --main ClickCircle --to html/index.js
+```
+
+``` haskell
+drawRandomCircle :: Context2D -> Effect Unit
+drawRandomCircle ctx = do
+  x <- random
+  y <- random
+  r <- random
+  c <- random
+
+  -- | Not a uniform distribution because the numbers are not zero padded,
+  -- | but they are still random colors.
+  let color = append "#" $ toStringAs hexadecimal $ floor $ c * 16777215.0 -- 0xFFFFFF
+  let path = arc ctx
+       { x      : x * 600.0
+       , y      : y * 600.0
+       , radius : r * 50.0
+       , start  : 0.0
+       , end    : 2.0 * pi
+       }
+
+  setFillStyle ctx color
+  setStrokeStyle ctx "#000000"
+  fillStrokePath ctx path
+
+main :: Effect Unit
+main = do
+  element <- getCanvasElementById "canvas"
+  case element of
+    Nothing -> error "canvas element not found"
+    Just canvas -> do
+      ctx <- getContext2D canvas
+      node <- querySelector "#canvas"
+      for_ node $ addEventListener "click" $ void do
+        logShow "Mouse clicked!"
+        drawRandomCircle ctx
+```
+
+3. (Medium) Write a function which transforms the scene by rotating it around a
+   point with specified coordinates. *Hint*: use a translation to first translate
+   the scene to the origin.
+
+I'm unsure which scene is being referred to.
+
