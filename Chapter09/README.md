@@ -177,3 +177,145 @@ main = do
 
 I'm unsure which scene is being referred to.
 
+## L-Systems
+
+1. (Easy) Modify the L-system example above to use `fillPath` instead of
+   `strokePath`. *Hint*: you will need to include a call to `closePath`, and
+   move the call to `moveTo` outside of the `interpret` function.
+
+``` sh
+spago bundle-app --main Example.LSystem --to html/index.js
+```
+
+2. (Easy) Try changing the various numerical constants in the code, to
+   understand their effect on the rendered system.
+
+``` sh
+spago bundle-app --main Example.LSystem --to html/index.js
+```
+
+3. (Medium) Break the `lsystem` function into two smaller functions. The first
+   should build the final sentence using repeated application of `concatMap`,
+   and the second should use `foldM` to interpret the result.
+
+``` haskell
+applyProductions :: forall a. Array a -> (a -> Array a) -> Int -> Array a
+applyProductions str prod 0 = str
+applyProductions str prod n = applyProductions (concatMap prod str) prod (n - 1)
+
+interpretString :: forall a m s. Monad m => (s -> a -> m s) -> s -> Array a -> m s
+interpretString interpret state str = foldM interpret state str
+```
+
+4. (Medium) Add a drop shadow to the filled shape, by using the
+   `setShadowOffsetX`, `setShadowOffsetY`, `setShadowBlur` and `setShadowColor`
+   actions. *Hint*: use PSCi to find the types of these functions.
+
+``` sh
+spago bundle-app --main Example.LSystem --to html/index.js
+```
+
+``` haskell
+setShadowOffsetX ctx 5.0
+setShadowOffsetY ctx 5.0
+setShadowBlur ctx 5.0
+setShadowColor ctx "#0000FF"
+```
+
+5. (Medium) The angle of the corners is currently a constant (`pi/3`). Instead,
+   it can be moved into the `Alphabet` data type, which allows it to be changed
+   by the production rules:
+
+   ``` haskell
+   type Angle = Number
+   
+   data Alphabet = L Angle | R Angle | F
+   ```
+
+   How can this new information be used in the production rules to create
+   interesting shapes?
+
+``` sh
+spago bundle-app --main Example.LSystem --to html/index.js
+```
+
+6. (Difficult) An L-system is given by an alphabet with four letters: `L` (turn
+   left through 60 degrees), `R` (turn right through 60 degrees), `F` (move
+   forward) and `M` (also move forward).
+
+   The initial sentence of the system is the single letter `M`.
+
+   The production rules are specified as follows:
+
+   ```
+   L -> L
+   R -> R
+   F -> FLMLFRMRFRMRFLMLF
+   M -> MRFRMLFLMLFLMRFRM
+   ```
+
+   Render this L-system. *Note*: you will need to decrease the number of
+   iterations of the production rules, since the size of the final sentence
+   grows exponentially with the number of iterations.
+
+   Now, notice the symmetry between `L` and `M` in the production rules. The
+   two "move forward" instructions can be differentiated using a `Boolean`
+   value using the following alphabet type:
+
+   ``` haskell
+   data Alphabet = L | R | F Boolean
+   ```
+
+   Implement this L-system again using this representation of the alphabet.
+
+``` sh
+spago bundle-app --main LSystem2 --to html/index.js
+```
+
+``` haskell
+let
+  initial :: Sentence
+  initial = [F false]
+
+  productions :: Alphabet -> Sentence
+  productions L = [L]
+  productions R = [R]
+  productions (F false) = [F false, L, F true, L, F false, R, F true, R, F false, R, F true, R, F false, L, F true, L, F false]
+  productions (F true) = [F true, R, F false, R, F true, L, F false, L, F true, L, F false, L, F true, R, F false, R, F true]
+
+  interpret :: State -> Alphabet -> Effect State
+  interpret state L = pure $ state { theta = state.theta - (pi / 3.0) }
+  interpret state R = pure $ state { theta = state.theta + (pi / 3.0) }
+  interpret state (F _) = do
+    let
+  	  x = state.x + cos state.theta * 10.0
+  	  y = state.x + sin state.theta * 10.0
+    _ <- lineTo ctx x y
+    pure { x, y, theta: state.theta }
+
+  initialState :: State
+  initialState = { x: 0.0, y: 0.0, theta: 0.0 }
+```
+
+7. (Difficult) Use a different monad `m` in the interpretation function. You
+   might try using `Effect.Console` to write the L-system onto the console, or
+   using `Effect.Random` to apply random "mutations" to the state type.
+
+``` sh
+spago bundle-app --main LSystem2 --to html/index.js
+```
+
+``` haskell
+interpret :: State -> Alphabet -> Effect State
+interpret state L = pure $ state { theta = state.theta - (pi / 3.0) }
+interpret state R = pure $ state { theta = state.theta + (pi / 3.0) }
+interpret state (F _) = do
+  r <- random
+  let
+    x = state.x + cos state.theta * 20.0 * r
+    y = state.x + sin state.theta * 20.0 * r
+  lineTo ctx x y
+  logShow state
+  pure { x, y, theta: state.theta }
+```
+
