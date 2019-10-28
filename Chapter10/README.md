@@ -69,3 +69,45 @@ undefined
 [ 3, 2, 1 ]
 ```
 
+## Foreign Function Interface (FFI)
+
+1. (Medium) Write a wrapper for the `confirm` method on the JavaScript `window`
+   object, and add your foreign function to the `Effect.Alert` module.
+
+``` javascript
+exports.confirm = function (msg) {
+  return function () {
+    return window.confirm(msg)
+  }
+}
+```
+
+``` haskell
+-- | src/Effect/Alert.purs
+foreign import confirm :: String -> Effect Boolean
+
+-- | src/Main.purs
+main :: Effect Unit
+main = do
+  alert "It works! FFI works!"
+  result <- confirm "Do you trust me?"
+  if result
+    then alert "Then Jump!"
+    else alert "T.T"
+```
+
+2. (Medium) Write a wrapper for the `removeItem` method on the `localStorage`
+   object, and add your foreign function to the `Effect.Storage` module.
+
+``` javascript
+exports.removeItem = function (key) {
+  return function () {
+    return window.localStorage.removeItem(key)
+  }
+}
+```
+
+``` haskell
+foreign import removeItem :: String -> Effect Unit
+```
+
