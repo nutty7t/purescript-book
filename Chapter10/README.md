@@ -111,3 +111,134 @@ exports.removeItem = function (key) {
 foreign import removeItem :: String -> Effect Unit
 ```
 
+## More FFI and Generics
+
+1. (Easy) Use `decodeJSON` to parse a JSON document representing a
+   two-dimensional JavaScript array of integers, such as `[[1, 2, 3], [4, 5],
+   [6]]`. What if the elements are allowed to be null? What if the arrays
+   themselves are allowed to be null?
+
+   ``` haskell
+   > runExcept $ (decodeJSON "[[1, 2, 3], [4, 5], [6]]" :: F (Array (Array Int)))
+   (Right [[1,2,3],[4,5],[6]])
+   ```
+
+   If the elements are allowed to be null, then I can change the type
+   annotation to encapsulate the `Int` type in a `Maybe` type constructor.
+
+   ``` haskell
+   > runExcept $ (decodeJSON "[[1, null, 3], [null, 5], [6]]" :: F (Array (Array (Maybe Int))))
+   (Right [[(Just 1),Nothing,(Just 3)],[Nothing,(Just 5)],[(Just 6)]])
+   ```
+
+2. (Medium) Convice yourself that the implementation of `savedData` should
+   type-check, and write down the inferred types of each subexpression in the
+   computation.
+
+``` haskell
+item :: Foreign
+readNullOrUndefined :: Foreign -> F (Maybe Foreign)
+readNullOrUndefined item :: F (Maybe Foreign)
+
+traverse :: forall a b m t. Traversable t => Applicative m => (a -> m b) -> t a -> m (t b)
+readString :: Foreign -> F String
+traverse readString :: forall t. Traversable t => t Foreign -> F (t String)
+
+bind (>>=) :: forall a b m. Bind m => m a -> (a -> m b) -> m b
+bindFlipped (=<<) :: forall m a b. Bind m => (a -> m b) -> m a -> m b
+traverse readString =<< readNullOrUndefined item :: F (Maybe String)
+
+json :: Maybe String
+decodeJSON :: forall a. Decode a => String -> F a
+traverse decodeJSON json :: F (Maybe String)
+runExcept :: forall e a. Except e a -> Either e a
+type F = Except MultipleErrors
+type MultipleErrors = NonEmptyList ForeignError
+
+(runExcept do
+ json <- traverse readString =<< readNullOrUndefined item
+ traverse decodeJSON json) :: Either (NonEmptyList ForeignError) (Maybe String)
+```
+
+3. (Medium) The following data type represents a binary tree with values at the
+   leaves:
+
+   ``` haskell
+   data Tree a = Leaf a | Branch (Tree a) (Tree a)
+   ```
+
+   Derive `Encode` and `Decode` instances for this type using
+   `purescript-foreign-generic`, and verify that encoded values can correcly be
+   decoded in PSCi.
+
+``` haskell
+data Tree a = Leaf a | Branch (Tree a) (Tree a)
+
+derive instance genericTree :: Generic (Tree a) _
+
+instance encodeTree :: Encode a => Encode (Tree a) where
+  encode t = genericEncode defaultOptions t
+
+instance decodeTree :: Decode a => Decode (Tree a) where
+  decode t = genericDecode defaultOptions t
+
+instance showTree :: Show a => Show (Tree a) where
+  show t = genericShow t
+```
+
+``` haskell
+> runExcept (decodeJSON $ encodeJSON (Branch (Leaf 5) (Leaf 3)) :: F (Tree Int))
+(Right (Branch (Leaf 5) (Leaf 3)))
+```
+
+``` json
+{
+  "contents": [
+    {
+      "contents": 5,
+      "tag": "Leaf"
+    },
+    {
+      "contents": 3,
+      "tag": "Leaf"
+    }
+  ],
+  "tag": "Branch"
+}
+```
+
+4. (Difficult) The following `data` type should be represented directly in JSON
+   as either an integer or a string:
+
+   ``` haskell
+   data IntOrString
+     = IntOrString_Int Int
+	 | IntOrString_String String
+   ```
+
+   Write instances for `Encode` and `Decode` for the `IntOrString` data type
+   which implements this behavior, and verify that encoded values can correctly
+   be decoded in PSCi.
+
+``` haskell
+data IntOrString
+  = IntOrString_Int Int
+  | IntOrString_String String
+
+derive instance genericIntOrString :: Generic IntOrString _
+
+instance encodeIntOrString :: Encode IntOrString where
+  encode = genericEncode defaultOptions
+
+instance decodeIntOrString :: Decode IntOrString where
+  decode = genericDecode defaultOptions
+
+instance showIntOrString :: Show IntOrString where
+  show = genericShow
+```
+
+``` haskell
+> runExcept (decode $ encode (IntOrString_Int 7) :: F IntOrString)
+(Right (IntOrString_Int 7))
+```
+
